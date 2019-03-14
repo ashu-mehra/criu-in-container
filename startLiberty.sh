@@ -11,12 +11,12 @@ function shutdown_server() {
 }
 
 function load_db() {
-	users=$1
-	db_retry_counter=0
+	declare users=$1
+	declare db_retry_counter=0
 	echo "INFO: Loading the database"
 	while true;
 	do
-		output="`wget -O- http://localhost:80/rest/info/loader/load?numCustomers=$users`"
+		declare output="`wget -O- http://localhost:80/rest/info/loader/load?numCustomers=$users`"
 		if [[ $output =~ "Loaded flights and $users customers" ]]; then
 			break
 		else
@@ -33,14 +33,14 @@ function load_db() {
 }
 
 function check_server_started() {
-	retry_counter=0
+	declare retry_counter=0
 	while true;
 	do
 		echo "INFO: Checking if server started (retry counter=${retry_counter})"
 		grep "Web application available" /logs/messages.log &> /dev/null
-		web_app_started=$?
+		declare web_app_started=$?
 		grep "The server defaultServer is ready to run a smarter planet" /logs/messages.log &> /dev/null
-		server_started=$?
+		declare server_started=$?
 		if [ ${web_app_started} -eq 0 ] && [ ${server_started} -eq 0 ]; then
 			echo "INFO: Server started successfully!"
 			load_db 100
@@ -61,11 +61,10 @@ function get_server_pid() {
 }
 
 function checkpoint_server() {
-	server_pid=$(get_server_pid)
+	declare server_pid=$(get_server_pid)
 	echo "INFO: Server PID: ${server_pid}"
 	echo "INFO: Checkpointing the server"
 	criu dump -t ${server_pid} --tcp-established -j --leave-running -v4 -o ${CRIU_DUMP_LOGFILE}
-	# ${ACMEAIR_CONTAINER_WORKDIR}/criu dump -t ${server_pid} --tcp-established -j --leave-running -v4 -o ${CRIU_DUMP_LOGFILE}
 	if [ $? -eq 0 ]; then
 		echo "INFO: ${CRIU_CHECKPOINT_SUCCESS_MSG}"
 	else
@@ -84,7 +83,10 @@ check_server_started
 server_status=$?
 if [ ${server_status} -eq 0 ]; then
 	checkpoint_server
+	trap handler SIGUSR1
+	wait
+else
+	echo "ERROR: Something went wrong! Check the logs"
+	exit 1
 fi
 
-trap handler SIGUSR1
-wait
