@@ -14,7 +14,7 @@ Check out `microservice_changes` branch from the repository:\
 
 ### 2. Install gradle
 
-[Gradle 4.1](https://services.gradle.org/distributions/gradle-4.1-bin.zip)` seems to work fine.
+[Gradle 4.1](https://services.gradle.org/distributions/gradle-4.1-bin.zip) seems to work fine.
 
 ### 3. Build the application
 
