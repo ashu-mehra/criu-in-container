@@ -81,7 +81,7 @@ Basic idea is to incorporate the checkpoint of the application in the docker ima
 ### Scripts
 
 To achieve this, we need to do perform same steps as above to bring up the AcmeAir application.\
-Once our server is up, we need to perform following additional steps:\
+Once our server is up, we need to perform following additional steps:
 1. Checkpoint the server using CRIU.
 2. Commit the docker container to create new image which would have the checkpoint.
 3. To start the AcmeAir application create new container using the new image and restore the application from the checkpoint.
