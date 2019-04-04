@@ -46,18 +46,14 @@ function cleanup() {
 function create_acmeair_server_image() {
 	if [ ! -d "${ACMEAIR_ROOT_DIR}" ]; then
 		echo "INFO:Cloning acmeair setup"
-		echo "CMD: git clone --depth 1 git@github.com:sabkrish/acmeair.git -b microservice_changes acmeair"
+		echo "CMD: git clone --depth 1 git@github.com:ashu-mehra/acmeair.git" 
 
-		git clone --depth 1 git@github.com:sabkrish/acmeair.git -b microservice_changes "${ACMEAIR_ROOT_DIR}"
+		git clone --depth 1 "git@github.com:ashu-mehra/acmeair.git" "${ACMEAIR_ROOT_DIR}"
 
 		echo "INFO: Cloning acmeair setup - Done"
 	else
 		echo "INFO: acmeair directory already exists - skip cloning"
 	fi
-
-	cp "${PROJECT_DIR}"/Dockerfile "${ACMEAIR_ROOT_DIR}"/acmeair-webapp/Dockerfile
-	cp "${PROJECT_DIR}"/startLiberty.sh "${ACMEAIR_ROOT_DIR}"/acmeair-webapp/startLiberty.sh
-	cp "${PROJECT_DIR}"/common_env_vars.sh "${ACMEAIR_ROOT_DIR}"/acmeair-webapp/common_env_vars.sh
 
 	declare war_location=`find "${ACMEAIR_ROOT_DIR}" -name "acmeair-webapp*SNAPSHOT.war"`
 	if [ -z "${war_location}" ]; then
@@ -88,11 +84,13 @@ function create_acmeair_server_image() {
 
 	"${PROJECT_DIR}"/create_liberty_image.sh websphere-liberty:openj9-nightly
 
+	# sed -i 's/websphere-liberty:kernel/websphere-liberty:openj9-nightly/g' "${ACMEAIR_ROOT_DIR}"/acmeair-webapp/Dockerfile
+
 	echo "INFO: Building acmeair docker image"
 	pushd "${ACMEAIR_ROOT_DIR}"/acmeair-webapp &> /dev/null
-	echo "CMD: docker build --build-arg workdir="${ACMEAIR_CONTAINER_WORKDIR}" -t "${ACMEAIR_DOCKER_IMAGE}" -f "${ACMEAIR_ROOT_DIR}"/acmeair-webapp/Dockerfile ."
+	echo "CMD: docker build -t "${ACMEAIR_DOCKER_IMAGE}" -f "${ACMEAIR_ROOT_DIR}"/acmeair-webapp/Dockerfile ."
 
-	docker build -q --build-arg workdir="${ACMEAIR_CONTAINER_WORKDIR}" -t "${ACMEAIR_DOCKER_IMAGE}" -f "${ACMEAIR_ROOT_DIR}"/acmeair-webapp/Dockerfile .
+	docker build -t "${ACMEAIR_DOCKER_IMAGE}" -f "${ACMEAIR_ROOT_DIR}"/acmeair-webapp/Dockerfile .
 
 	popd &> /dev/null
 	if [ $? -eq 0 ]; then
@@ -148,70 +146,6 @@ function setup_container_images() {
 }
 
 
-function start_containers() {
-	echo "INFO: Starting mongo db and acmeair server containers"
-	echo "CMD: docker run --name=${MONGO_DB_CONTAINER} --network=${DOCKER_NETWORK} --ip='172.28.0.2' -d ${MONGO_DB_IMAGE}"
-
-	declare mongo_db=`docker run --name="${MONGO_DB_CONTAINER}" --network="${DOCKER_NETWORK}" --ip='172.28.0.2' -d "${MONGO_DB_IMAGE}"`
-
-	if [ $? -ne 0 ]; then
-		echo "ERROR: Failed to start mongo db container"
-		exit 1
-	fi
-
-	echo "INFO: Mongo db container id ${mongo_db}"
-	echo "CMD: docker run --name=${ACMEAIR_CONTAINER} --privileged -d -p 80:80 --network=${DOCKER_NETWORK} --ip='172.28.0.3' -e MONGO_HOST=${MONGO_DB_CONTAINER} ${ACMEAIR_DOCKER_IMAGE} ${ACMEAIR_CONTAINER_WORKDIR}/startLiberty.sh"
-
-	declare acmeair_server=`docker run --name="${ACMEAIR_CONTAINER}" --privileged -d -p '80:80' --network="${DOCKER_NETWORK}" --ip='172.28.0.3' -e MONGO_HOST="${MONGO_DB_CONTAINER}" "${ACMEAIR_DOCKER_IMAGE}" "${ACMEAIR_CONTAINER_WORKDIR}"/startLiberty.sh`
-
-	if [ $? -ne 0 ]; then
-		echo "ERROR: Failed to start acmeair server container"
-		exit 1
-	fi
-
-	echo "INFO: Acmeair server container id ${acmeair_server}"
-	echo "INFO: Starting mongo db and acmeair server containers - Done"
-}
-
-function checkpoint_container() {
-	# check docker logs for "checkpoint success" message
-	declare retry_counter=0
-	while true;
-	do
-		echo "INFO: Waiting for checkpoint (retry count: "${retry_counter}")"
-
-		docker logs --tail=1 "${ACMEAIR_CONTAINER}" | grep "${CRIU_CHECKPOINT_SUCCESS_MSG}" &> /dev/null
-
-		if [ $? -eq 0 ]; then
-			echo "INFO: Checkpoint done. Committing the container"
-
-			docker cp "${ACMEAIR_CONTAINER}":"${ACMEAIR_CONTAINER_WORKDIR}"/"${CRIU_DUMP_LOGFILE}" .
-
-			echo "CMD: docker commit ${ACMEAIR_CONTAINER} ${ACMEAIR_DOCKER_NEW_IMAGE}"
-
-			docker commit "${ACMEAIR_CONTAINER}" "${ACMEAIR_DOCKER_NEW_IMAGE}"
-
-			echo "INFO: New docker image with checkpoint created"
-
-			docker kill -s SIGUSR1 "${ACMEAIR_CONTAINER}" &> /dev/null
-
-			sleep 5s
-
-			docker stop "${ACMEAIR_CONTAINER}"
-
-			docker rm "${ACMEAIR_CONTAINER}"
-
-			break
-		fi
-		if [ "${retry_counter}" -eq 20 ]; then
-			echo "ERROR: Checkpoint timed out"
-			exit 1
-		fi
-		retry_counter=$(($retry_counter+1))
-		sleep 5s
-	done
-}
-
 # execution starts from here
 for i in "$@"; do
 	case $i in
@@ -238,6 +172,4 @@ fi
 
 setup_docker_network
 setup_container_images
-start_containers
-checkpoint_container
 

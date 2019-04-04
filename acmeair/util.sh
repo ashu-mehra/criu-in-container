@@ -6,13 +6,13 @@
 function check_image_exists() {
 	OIFS=$IFS
 	IFS=":"; set $1
-	declare image_repo=$1
-	declare image_tag=$2
+	local image_repo=$1
+	local image_tag=$2
 	IFS=$OIFS
 	if [ -z ${image_tag} ]; then
 		image_tag="latest"
 	fi
-	declare images_output=`docker images ${image_repo}:${image_tag}`
+	local images_output=`docker images ${image_repo}:${image_tag}`
 	if [[ ${images_output} =~ ${image_repo} && ${images_output} =~ ${image_tag} ]]; then
 		return 0 
 	else
@@ -23,8 +23,8 @@ function check_image_exists() {
 # Usage: check_container_running <image_name> [<container_name>]
 # eg: check_container_running mongo:latest acmeair-db
 function check_container_running() {
-	declare image=$1
-	declare container=$2
+	local image=$1
+	local container=$2
 	output=`docker ps | grep "${image}"`
 	if [[ $? -eq 0  &&  "${output}" =~ "${container}" ]]; then
 		return 0
@@ -32,3 +32,4 @@ function check_container_running() {
 		return 1
 	fi
 }
+

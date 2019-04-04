@@ -3,19 +3,19 @@
 source ./util.sh
 
 PROJECT_DIR=`pwd`
-DOCKERFILE_LOCATION="$PROJECT_DIR/liberty/docker"
+DOCKERFILE_DIR="$PROJECT_DIR/liberty/docker"
 
 function create_liberty_image() {
-	if [ ! -f "${DOCKERFILE_LOCATION}/Dockerfile" ]; then
+	if [ ! -f "${DOCKERFILE_DIR}/Dockerfile" ]; then
 		echo "ERROR: Did not find Dockerfile for liberty"
 		exit 1
 	else
-		pushd ${DOCKERFILE_LOCATION}
+		pushd ${DOCKERFILE_DIR}
 		echo "INFO: Pulling OpenJ9 nightly image"
 		echo "CMD: docker pull adoptopenjdk/openjdk8-openj9:nightly"
 		docker pull adoptopenjdk/openjdk8-openj9:nightly
 		echo "CMD: docker build -q -t ${image} -f Dockerfile ."
-		docker build -q -t "${image}" -f Dockerfile .
+		docker -q build -t "${image}" -f Dockerfile .
 		popd
 	fi
 }
