@@ -1,6 +1,7 @@
 #!/bin/bash
 
 source ./common_env_vars.sh
+source ./util.sh
 
 app_image=$1
 app_container=$2
