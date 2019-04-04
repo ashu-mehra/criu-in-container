@@ -5,6 +5,13 @@ source ./common_env_vars.sh
 app_image=$1
 app_container=$2
 
+if [ -z "${app_image}" ]; then
+	app_image="acmeair_liberty:latest"
+fi
+if [ -z "${app_container}" ]; then
+	app_container="acmeair-app"
+fi
+
 check_container_running "${MONGO_DB_IMAGE}" "${MONGO_DB_CONTAINER}"
 if [ $? -eq 1 ]; then
 	echo "INFO: Starting mongo db and acmeair server containers"
