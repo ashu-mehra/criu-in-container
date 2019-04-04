@@ -3,49 +3,46 @@
 This project is an attempt to demostrate use of CRIU inside docker containers to improve startup time of applications.
 It uses AcmeAir Java application as the use-case. You can read more about AcmeAir [here](https://github.com/sabkrish/acmeair).
 
+## Prereqs For AcmeAir
+
+**1. Install Java 8**
+Get it from AdoptOpenJDK: https://adoptopenjdk.net/
+**2. Install gradle**\
+[Gradle 4.1](https://services.gradle.org/distributions/gradle-4.1-bin.zip) seems to work fine.
+
 ## AcmeAir execution process
 
 Process for starting AcmeAir involves following steps:
 
-### 1. Clone AcmeAir repository
+### 1. Execute setup_acmeair.sh
 
-Check out `microservice_changes` branch from the repository:\
-`git clone --depth 1 git@github.com:sabkrish/acmeair.git -b microservice_changes acmeair`
+`$ ./setup_acmeair.sh`
 
-### 2. Install gradle
+This script performs following steps:
 
-[Gradle 4.1](https://services.gradle.org/distributions/gradle-4.1-bin.zip) seems to work fine.
+**1.1 Sets up docker network**
 
-### 3. Build the application
+Creates a docker network of type `bridge` with name `acmeair-net`.
 
-Go to AcmeAir source directory and run `gradle build`.\
-This would generate `acmeair-webapp/build/libs/acmeair-webapp-2.0.0-SNAPSHOT.war` on successful completion.
+**1.2 Pulls mongo db docker image**
 
-### 4. Create docker images
+**1.3 Clones AcmeAir repository**
 
-To generate docker image run following command from the AcmeAir source directory:\
-`docker-compose -f docker-compose.yml_monolithic build`
+Clones AcmeAir from the repository `git@github.com:ashu-mehra/acmeair.git`
 
-After successful completion, two images `mongo:latest` and `acmeair_mono_service_liberty1` would be generated.\
-`mongo:latest` is the mongo-db container image.\
-`acmeair_mono_service_liberty1` is the container image for AcmeAir application based on Liberty server
+**1.3 Builds AcmeAir**
+**1.4 Creates AcmeAir docker image**
 
-### 5. Create docker network
+By default the AcmeAir image is named as `acmeair_liberty:latest` which can be configured in `common_env_vars.sh`.
 
-This is required for communication between mongo-db container and AcmeAir app container.\
-Run following command to set-up docker bridge network:\
-`docker network create --driver bridge acmeair-net`
+### 2. Execute run_acmeair.sh
 
-### 6. Start the containers
-
-Start the mongo-db container first as:\
-`docker run -d --name=acmeair-db --network=acmeair-net mongo`
-
-Next start the AcmeAir application:\
-`docker run -d --name=acmeair-server -p 80:80 --network=acmeair-net -e MONGO_HOST=acmeair-db acmeair_mono_service_liberty1`
+`$ ./run_acmeair.sh [docker-image] [container-name]`\
+where `docker-image` is the AcmeAir docker image to be used for starting AcmeAir application (default=acmeair_liberty:latest)
+and `container-name` is the name of the container to be used for the AcmeAir app container (default=acmaeir-app)
 
 Verify the AcmeAir started by checking logs of the container as:\
-`docker logs -t --follow acmeair-server`
+`docker logs -t --follow acmeair-app`
 
 You can check the server logs for the time it took to start the application.\
 In the output of above command, search for the message `The server defaultServer is ready to run a smarter planet`.\
@@ -80,19 +77,16 @@ Basic idea is to incorporate the checkpoint of the application in the docker ima
 
 ### Scripts
 
-To achieve this, we need to do perform same steps as above to bring up the AcmeAir application.\
-Once our server is up, we need to perform following additional steps:
-1. Checkpoint the server using CRIU.
-2. Commit the docker container to create new image which would have the checkpoint.
-3. To start the AcmeAir application create new container using the new image and restore the application from the checkpoint.
+To achieve this, copied the generic scripts from https://github.com/ashu-mehra/criu-for-docker.
+Then updated `app.sh` and `run_app_docker_image.sh` based on the AcmeAir Liberty setup.
 
-All the above initial steps to start up the AcmeAir app, checkpoint it and committing the container are automated in script `create_checkpoint_image.sh`. The last step is covered by `restore_from_checkpoint.sh`.
+Now run `driver.sh` as:
 
-So, to generate the new docker image with AcmeAir application checkpoint, run:
-`$ ./create_checkpoint_image.sh`
+`$ ./driver.sh acmeair_liberty_checkpoint`
 
-On successful completion, it generates a new docker image with name `acmeair_liberty_checkpoint`.
-To start the AcmeAir application using `acmeair_liberty_checkpoint`, run:
-`$ ./restore_from_checkpoint.sh`
+On success it would create a new container image with name `acmeair_liberty_checkpoint:latest` which contains the AcmeAir application checkpoint.
+
+Use this image to start the AcmeAir as:
+`$ ./run_acmeair.sh acmeair_liberty_checkpoint acmeair-app`
 
 You should now be able to access `http://localhost/`.
