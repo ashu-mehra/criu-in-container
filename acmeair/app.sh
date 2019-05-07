@@ -7,7 +7,7 @@ check_server_started() {
                 echo "INFO: Checking if server started (retry counter=${retry_counter})"
                 grep "Web application available" /logs/messages.log &> /dev/null
                 local web_app_started=$?
-                grep "The server defaultServer is ready to run a smarter planet" /logs/messages.log &> /dev/null
+                grep "The defaultServer server is ready to run a smarter planet" /logs/messages.log &> /dev/null
                 local server_started=$?
                 if [ ${web_app_started} -eq 0 ] && [ ${server_started} -eq 0 ]; then
                         echo "INFO: Server started successfully!"

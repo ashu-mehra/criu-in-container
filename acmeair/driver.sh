@@ -2,6 +2,8 @@
 
 source ./util.sh
 CHECKPOINT_SUCCESS_MSG="Checkpoint success"
+CR_LOG_DIR="/root/appcr/cr_logs"
+DUMP_LOG_FILE="dump.log"
 image_name=$1
 tmp_image_name="tmp-${image_name}"
 container_name="app-container-for-cr"

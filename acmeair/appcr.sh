@@ -3,6 +3,8 @@
 source ./app.sh
 
 restore_from_checkpoint() {
+	umount -R /proc
+	mount -t proc proc /proc
 	criu restore --tcp-established -j -v4 -o ${CR_LOG_DIR}/${RESTORE_LOG_FILE}
 }
 
@@ -35,7 +37,7 @@ else
 	# checkpoint does not exist, run the app and checkpoint it
 	echo "INFO: Starting the app to checkpoint it"
 	trap stop_app SIGUSR1 # register a handler that stops the application when driver script generates SIGUSR1 signal
-	start_app "$@"
+	start_app "$@" # start_app is in app.sh
 	#./app.sh "start" "${pid}" "$@" 
 	if [ $? -eq 0 ]; then
 		app_started

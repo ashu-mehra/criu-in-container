@@ -82,7 +82,11 @@ function create_acmeair_server_image() {
 		echo "INFO: acmeair application war file `basename "${war_location}"` already exists, skip building it"
 	fi
 
-	"${PROJECT_DIR}"/create_liberty_image.sh websphere-liberty:openj9-nightly
+	"${PROJECT_DIR}"/create_liberty_image.sh "websphere-liberty:openj9-nightly"
+
+	if [ $? -ne 0 ]; then
+		exit 1
+	fi
 
 	# sed -i 's/websphere-liberty:kernel/websphere-liberty:openj9-nightly/g' "${ACMEAIR_ROOT_DIR}"/acmeair-webapp/Dockerfile
 
